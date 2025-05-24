@@ -111,7 +111,7 @@ def draw_simulation(fuel, temperature):
         acceleration = gravity - (thrust / 100)
         if fuel > 0 and thrust > gravity * 100:
             vy -= acceleration
-            fuel -= 0.1
+            fuel -= 0.5
         else:
             vy += gravity
 
@@ -192,11 +192,20 @@ def draw_simulation(fuel, temperature):
         else:
             cv2.putText(frame, f"RR: OFF", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
+        if fuel==0:
+            cv2.putText(frame, "Crashed!", (width//2 - 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+            cv2.imshow("Moon Lander Simulation", frame)
+            cv2.waitKey(0)
+            break
 
-        if lander_y >= height - 150:
+        cv2.imshow("Moon Lander Simulation", frame)
+        if cv2.waitKey(100) == 27:
+            break
+        else: 
+         if lander_y >= height - 150:
             if abs(vy) <= 2 and abs(vx) <= 2:
                 cv2.putText(frame, "Landed Safely!", (width//2 - 200, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 4)
-            else:
+            else :
                 cv2.putText(frame, "Crashed!", (width//2 - 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
             cv2.imshow("Moon Lander Simulation", frame)
             cv2.waitKey(0)
