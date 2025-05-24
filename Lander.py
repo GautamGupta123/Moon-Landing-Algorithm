@@ -6,10 +6,13 @@ lander_width, lander_height = 40, 100
 trajectory_points = []
 
 class Obstacle:
-    def __init__(self, width, height):
+    def __init__(self, width, height,x=None,y=None):
         self.radius = random.randint(10, 20)
-        corners = [(0, 0), (width, 10), (10, height), (width, height)]
-        self.x, self.y = random.choice(corners)
+        if x is not None and y is not None:
+            self.x, self.y = x, y
+        else:
+            corners = [(0, 0), (width, 10), (10, height), (width, height)]
+            self.x, self.y = random.choice(corners)
         angle = random.uniform(np.pi / 4, 3 * np.pi / 4) if self.y == 0 else random.uniform(-np.pi / 4, -3 * np.pi / 4)
         speed = random.uniform(0.5, 1.5)
         self.vx = speed * np.cos(angle)
@@ -25,55 +28,14 @@ class Obstacle:
     def collides_with(self, lx, ly):
         return np.hypot(self.x - lx, self.y - ly) < self.radius + max(lander_width, lander_height) / 2
 
-def draw_lander(frame, x, y, angle, thrusting):
-    M = cv2.getRotationMatrix2D((x, y), angle, 1.0)
-    canvas = np.zeros_like(frame)
-
-    body_color = (200, 200, 200)
-    cv2.ellipse(canvas, (x, y - lander_height // 4), (lander_width // 2, lander_height // 3), 0, 0, 360, body_color, -1)
-    cv2.circle(canvas, (x, y - lander_height // 2), 20, (0, 0, 255), -1)
-    cv2.circle(canvas, (x, y - lander_height // 2), 15, (255, 255, 255), 2)
-    cv2.rectangle(canvas, (x - lander_width // 2, y), (x + lander_width // 2, y + lander_height // 4), (150, 150, 150), -1)
-    cv2.line(canvas, (x - lander_width // 2, y + lander_height // 4), (x - lander_width, y + lander_height // 2), (255, 255, 255), 3)
-    cv2.line(canvas, (x + lander_width // 2, y + lander_height // 4), (x + lander_width, y + lander_height // 2), (255, 255, 255), 3)
-    cv2.line(canvas, (x - lander_width // 4, y + lander_height // 4), (x - lander_width // 4, y + lander_height // 2), (0, 255, 255), 3)
-    cv2.line(canvas, (x + lander_width // 4, y + lander_height // 4), (x + lander_width // 4, y + lander_height // 2), (0, 255, 255), 3)
-    if thrusting:
-        flame_color = (0, 165, 255)
-        cv2.line(canvas, (x - lander_width // 4, y + lander_height // 2), (x - lander_width // 4, y + lander_height // 2 + 30), flame_color, 10)
-        cv2.line(canvas, (x + lander_width // 4, y + lander_height // 2), (x + lander_width // 4, y + lander_height // 2 + 30), flame_color, 10)
-    rotated = cv2.warpAffine(canvas, M, (frame.shape[1], frame.shape[0]))
-    frame[:] = cv2.add(frame, rotated)
-
-def get_phase(altitude):
-    if altitude > 400:
-        return "Rough Braking Phase"
-    elif altitude > 250:
-        return "Altitude Hold Phase"
-    elif altitude > 100:
-        return "Fine Braking Phase"
-    elif altitude > 20:
-        return "Terminal Descent Phase"
-    else:
-        return "Touchdown"
-
-def auto_thrust(altitude):
-    if altitude > 400:
-        return 100
-    elif altitude > 250:
-        return 80
-    elif altitude > 100:
-        return 60
-    elif altitude > 20:
-        return 40
-    else:
-        return 0
+#hp
+#hk
 
 def draw_simulation(fuel, temperature):
     width, height = 1000, 800
     lander_x, lander_y = 200, 100
     vx, vy = 1.5, 0.0
-    gravity = 0.1
+    gravity =0.5
     angle = -30
     obstacles = []
 
@@ -84,17 +46,16 @@ def draw_simulation(fuel, temperature):
         altitude = height - lander_y - 150
         phase = get_phase(altitude)
         thrust = auto_thrust(altitude)
-        thrusting = fuel > 0 and thrust > gravity * 100
+        thrusters = get_thruster_states(phase)
 
-        acceleration = gravity-(thrust / 100)
-        if fuel > 0:
-            vy += acceleration
-            fuel -= 0.3
+        acceleration = gravity - (thrust / 100)
+        if fuel > 0 and thrust > gravity * 100:
+            vy -= acceleration
+            fuel -= 0.5
         else:
             vy += gravity
 
         vy = max(min(vy, 2), -1)
-
         lander_y += int(vy)
 
         if altitude < 100:
@@ -124,8 +85,7 @@ def draw_simulation(fuel, temperature):
                     avoidance_force += force
             ob.draw(frame)
             if ob.collides_with(lander_x, lander_y):
-                cv2.putText(frame, "Crashed into obstacle!", (width//2 - 250, height//2),
-                            cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+                cv2.putText(frame, "Crashed into obstacle!", (width//2 - 250, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
                 cv2.imshow("Moon Lander Simulation", frame)
                 cv2.waitKey(0)
                 cv2.destroyAllWindows()
@@ -134,7 +94,7 @@ def draw_simulation(fuel, temperature):
         vx += avoidance_force
         lander_x += int(vx)
 
-        draw_lander(frame, lander_x, lander_y, angle, thrusting)
+        draw_lander(frame, lander_x, lander_y, angle, thrusters)
 
         bar_x = width - 50
         bar_top = 50
@@ -151,18 +111,16 @@ def draw_simulation(fuel, temperature):
 
         cv2.putText(frame, f"Fuel: {int(fuel)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.putText(frame, f"Temperature: {temperature} C", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.putText(frame, f"Altitude: {altitude}KM", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.putText(frame, f"V Velocity: {vy:.2f}", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-        cv2.putText(frame, f"H Velocity: {vx:.2f}", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(frame, f"Altitude: {altitude}M", (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(frame, f"V Velocity: {vy:.2f} m/s", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+        cv2.putText(frame, f"H Velocity: {vx:.2f} m/s", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.putText(frame, f"Phase: {phase}", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
 
         if lander_y >= height - 150:
             if abs(vy) <= 2 and abs(vx) <= 2:
-                cv2.putText(frame, "Landed Safely!", (width//2 - 200, height//2),
-                            cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 4)
+                cv2.putText(frame, "Landed Safely!", (width//2 - 200, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 4)
             else:
-                cv2.putText(frame, "Crashed!", (width//2 - 100, height//2),
-                            cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+                cv2.putText(frame, "Crashed!", (width//2 - 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
             cv2.imshow("Moon Lander Simulation", frame)
             cv2.waitKey(0)
             break
