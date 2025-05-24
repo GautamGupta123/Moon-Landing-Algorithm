@@ -29,6 +29,39 @@ class Obstacle:
         return np.hypot(self.x - lx, self.y - ly) < self.radius + max(lander_width, lander_height) / 2
 
 #hp
+def get_phase(altitude):
+    if altitude > 400:
+        return "Rough Braking Phase"
+    elif altitude > 250:
+        return "Altitude Hold Phase"
+    elif altitude > 100:
+        return "Fine Braking Phase"
+    elif altitude > 20:
+        return "Terminal Descent Phase"
+    else:
+        return "Touchdown"
+
+def auto_thrust(altitude):
+    if random.random() < 0.3:
+        return 0
+    if altitude > 400:
+        return 100
+    elif altitude > 250:
+        return 80
+    elif altitude > 100:
+        return 60
+    elif altitude > 20:
+        return 40
+    else:
+        return 0
+
+def get_thruster_states(phase):
+    return {
+        "FL": phase in ["Rough Braking Phase", "Fine Braking Phase"],
+        "FR": phase in ["Rough Braking Phase", "Fine Braking Phase"],
+        "RL": phase in ["Altitude Hold Phase", "Fine Braking Phase"],
+        "RR": phase in ["Altitude Hold Phase", "Fine Braking Phase", "Terminal Descent Phase"]
+    }
 #hk
 
 def draw_simulation(fuel, temperature):
