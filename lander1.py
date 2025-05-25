@@ -75,18 +75,18 @@ def draw_lander(frame, x, y, angle, thrusters):
     cv2.line(canvas, (x + lander_width // 2, y + lander_height // 4), (x + lander_width, y + lander_height // 2), (255, 255, 255), 3)
 
     flame_color = (0, 165, 255)
-    if thrusters.get("FL"):
+    if thrusters.get("FL") and fuel>0:
         cv2.line(canvas, (x - lander_width // 2 + 5, y + lander_height // 4), (x - lander_width // 2 + 5, y + lander_height // 4 + 30), flame_color, 8)
-        # cv2.putText(frame, f"FL: ON", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    if thrusters.get("FR"):
+        
+    if thrusters.get("FR") and fuel>0:
         cv2.line(canvas, (x + lander_width // 2 - 5, y + lander_height // 4), (x + lander_width // 2 - 5, y + lander_height // 4 + 30), flame_color, 8)
-        # cv2.putText(frame, f"FR: ON", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    if thrusters.get("RL"):
+      
+    if thrusters.get("RL") and fuel>0:
         cv2.line(canvas, (x - lander_width // 4, y + lander_height // 2), (x - lander_width // 4, y + lander_height // 2 + 30), flame_color, 8)
-        # cv2.putText(frame, f"RL: ON", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-    if thrusters.get("RR"):
+      
+    if thrusters.get("RR") and fuel>0:
         cv2.line(canvas, (x + lander_width // 4, y + lander_height // 2), (x + lander_width // 4, y + lander_height // 2 + 30), flame_color, 8)
-        # cv2.putText(frame, f"RR: ON", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        
 
     rotated = cv2.warpAffine(canvas, M, (frame.shape[1], frame.shape[0]))
     frame[:] = cv2.add(frame, rotated)
@@ -175,25 +175,25 @@ def draw_simulation(fuel, temperature):
         cv2.putText(frame, f"V Velocity: {vy:.2f} m/s", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.putText(frame, f"H Velocity: {vx:.2f} m/s", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.putText(frame, f"Phase: {phase}", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
-        if thrusters.get("FL"):
+        if thrusters.get("FL") and fuel>0:
               cv2.putText(frame, f"FL: ON", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         else:
               cv2.putText(frame, f"FL: OFF", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        if thrusters.get("FR"):
+        if thrusters.get("FR") and fuel>0:
               cv2.putText(frame, f"FR: ON", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         else:
               cv2.putText(frame, f"FR: OFF", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        if thrusters.get("RL"):
+        if thrusters.get("RL") and fuel>0:
             cv2.putText(frame, f"RL: ON", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         else:
             cv2.putText(frame, f"RL: OFF", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-        if thrusters.get("RR"):
+        if thrusters.get("RR") and fuel>0:
             cv2.putText(frame, f"RR: ON", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         else:
             cv2.putText(frame, f"RR: OFF", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         if fuel==0:
-            cv2.putText(frame, "Crashed!", (width//2 - 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+            cv2.putText(frame, "Crashed!(OUT OF FUEL)", (width//4 + 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv2.imshow("Moon Lander Simulation", frame)
             cv2.waitKey(0)
             break

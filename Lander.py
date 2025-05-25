@@ -87,6 +87,7 @@ def draw_lander(frame, x, y, angle, thrusters):
 
     rotated = cv2.warpAffine(canvas, M, (frame.shape[1], frame.shape[0]))
     frame[:] = cv2.add(frame, rotated)
+
 def draw_simulation(fuel, temperature):
     width, height = 1000, 800
     lander_x, lander_y = 200, 100
@@ -94,6 +95,8 @@ def draw_simulation(fuel, temperature):
     gravity =0.5
     angle = -30
     obstacles = []
+    altitude_history = []
+    max_history_length = 200  # max number of points shown in graph
 
     while True:
         frame_bg = cv2.imread("moon.jpg")
@@ -103,6 +106,25 @@ def draw_simulation(fuel, temperature):
         phase = get_phase(altitude)
         thrust = auto_thrust(altitude)
         thrusters = get_thruster_states(phase)
+        altitude_history.append(altitude)
+        if len(altitude_history) > max_history_length:
+          altitude_history.pop(0)
+
+# Define graph area (bottom-right of screen)
+        graph_origin = (width - 300, height - 200)
+        graph_width, graph_height = 250, 150
+        cv2.rectangle(frame, graph_origin, (graph_origin[0] + graph_width, graph_origin[1] + graph_height), (50, 50, 50), -1)
+        cv2.rectangle(frame, graph_origin, (graph_origin[0] + graph_width, graph_origin[1] + graph_height), (255, 255, 255), 2)
+        cv2.putText(frame, "Altitude Graph", (graph_origin[0], graph_origin[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+# Normalize and plot graph points
+        if len(altitude_history) > 1:
+         for i in range(1, len(altitude_history)):
+           x1 = graph_origin[0] + int((i - 1) * graph_width / max_history_length)
+           y1 = graph_origin[1] + graph_height - int(altitude_history[i - 1] * graph_height / 800)
+           x2 = graph_origin[0] + int(i * graph_width / max_history_length)
+           y2 = graph_origin[1] + graph_height - int(altitude_history[i] * graph_height / 800)
+           cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
         acceleration = gravity - (thrust / 100)
         if fuel > 0 and thrust > gravity * 100:
