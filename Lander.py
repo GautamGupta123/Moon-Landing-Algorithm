@@ -1,5 +1,5 @@
 import cv2
-import numpy as np
+import numpy as np 
 import random
 
 lander_width, lander_height = 40, 100
@@ -63,7 +63,30 @@ def get_thruster_states(phase):
         "RR": phase in ["Altitude Hold Phase", "Fine Braking Phase", "Terminal Descent Phase"]
     }
 #hk
+def draw_lander(frame, x, y, angle, thrusters):
+    M = cv2.getRotationMatrix2D((x, y), angle, 1.0)
+    canvas = np.zeros_like(frame)
 
+    body_color = (200, 200, 200)
+    cv2.ellipse(canvas, (x, y - lander_height // 4), (lander_width // 2, lander_height // 3), 0, 0, 360, body_color, -1)
+    cv2.circle(canvas, (x, y - lander_height // 2), 20, (0, 0, 255), -1)
+    cv2.circle(canvas, (x, y - lander_height // 2), 15, (255, 255, 255), 2)
+    cv2.rectangle(canvas, (x - lander_width // 2, y), (x + lander_width // 2, y + lander_height // 4), (150, 150, 150), -1)
+    cv2.line(canvas, (x - lander_width // 2, y + lander_height // 4), (x - lander_width, y + lander_height // 2), (255, 255, 255), 3)
+    cv2.line(canvas, (x + lander_width // 2, y + lander_height // 4), (x + lander_width, y + lander_height // 2), (255, 255, 255), 3)
+
+    flame_color = (0, 165, 255)
+    if thrusters.get("FL"):
+        cv2.line(canvas, (x - lander_width // 2 + 5, y + lander_height // 4), (x - lander_width // 2 + 5, y + lander_height // 4 + 30), flame_color, 8)
+    if thrusters.get("FR"):
+        cv2.line(canvas, (x + lander_width // 2 - 5, y + lander_height // 4), (x + lander_width // 2 - 5, y + lander_height // 4 + 30), flame_color, 8)
+    if thrusters.get("RL"):
+        cv2.line(canvas, (x - lander_width // 4, y + lander_height // 2), (x - lander_width // 4, y + lander_height // 2 + 30), flame_color, 8)
+    if thrusters.get("RR"):
+        cv2.line(canvas, (x + lander_width // 4, y + lander_height // 2), (x + lander_width // 4, y + lander_height // 2 + 30), flame_color, 8)
+
+    rotated = cv2.warpAffine(canvas, M, (frame.shape[1], frame.shape[0]))
+    frame[:] = cv2.add(frame, rotated)
 def draw_simulation(fuel, temperature):
     width, height = 1000, 800
     lander_x, lander_y = 200, 100
