@@ -5,7 +5,7 @@ import pygame
 
 pygame.mixer.init()
 thrust_sound = pygame.mixer.Sound('sound_effects/rocket_sound.mp3') 
-low_fuel_sound=pygame.mixer.Sound('sound_effects/alert.mp3') # Make sure you have a thrust.wav sound file in your working directory
+low_fuel_sound=pygame.mixer.Sound('sound_effects/alert.mp3')
 
 lander_width, lander_height = 40, 100
 trajectory_points = []
