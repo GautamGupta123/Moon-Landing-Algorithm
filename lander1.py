@@ -106,7 +106,7 @@ def draw_simulation(fuel, temperature):
         altitude = height - lander_y - 150
         phase = get_phase(altitude)
         thrust = auto_thrust(altitude)
-        thrusters = get_thruster_states(phase)
+        thrusters = get_thruster_states(phase) if fuel > 0 else {"FL": False, "FR": False, "RL": False, "RR": False}
 
         acceleration = gravity - (thrust / 100)
         if fuel > 0 and thrust > gravity * 100:
@@ -196,6 +196,7 @@ def draw_simulation(fuel, temperature):
             cv2.putText(frame, "Crashed!(OUT OF FUEL)", (width//4 + 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             cv2.imshow("Moon Lander Simulation", frame)
             cv2.waitKey(0)
+            cv2.destroyAllWindows()
             break
 
         cv2.imshow("Moon Lander Simulation", frame)
