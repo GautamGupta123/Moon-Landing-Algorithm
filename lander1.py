@@ -1,6 +1,11 @@
 import cv2
 import numpy as np
 import random
+import pygame
+
+pygame.mixer.init()
+thrust_sound = pygame.mixer.Sound('sound_effects/rocket_sound.mp3') 
+low_fuel_sound=pygame.mixer.Sound('sound_effects/alert.mp3') # Make sure you have a thrust.wav sound file in your working directory
 
 lander_width, lander_height = 40, 100
 trajectory_points = []
@@ -62,7 +67,7 @@ def get_thruster_states(phase):
         "RR": phase in ["Altitude Hold Phase", "Fine Braking Phase", "Terminal Descent Phase"]
     }
 
-def draw_lander(frame, x, y, angle, thrusters):
+def draw_lander(frame, x, y, angle, thrusters,emergency_fuel,emergency_used,fuel):
     M = cv2.getRotationMatrix2D((x, y), angle, 1.0)
     canvas = np.zeros_like(frame)
 
@@ -86,17 +91,20 @@ def draw_lander(frame, x, y, angle, thrusters):
       
     if thrusters.get("RR") and fuel>0:
         cv2.line(canvas, (x + lander_width // 4, y + lander_height // 2), (x + lander_width // 4, y + lander_height // 2 + 30), flame_color, 8)
-        
+    if emergency_fuel > 0 and fuel <= 0 and emergency_used is True:
+        cv2.line(canvas, (x, y + lander_height // 2), (x, y + lander_height // 2 + 30), (255, 0, 0), 8)
 
     rotated = cv2.warpAffine(canvas, M, (frame.shape[1], frame.shape[0]))
     frame[:] = cv2.add(frame, rotated)
 
-def draw_simulation(fuel, temperature):
+def draw_simulation(fuel, temperature,emergency_fuel):
     width, height = 1000, 800
     lander_x, lander_y = 200, 100
     vx, vy = 1.5, 0.0
     gravity =0.5
     angle = -30
+    # emergency_fuel=100
+    emergency_used=False
     obstacles = []
 
     while True:
@@ -110,10 +118,16 @@ def draw_simulation(fuel, temperature):
 
         acceleration = gravity - (thrust / 100)
         if fuel > 0 and thrust > gravity * 100:
-            vy -= acceleration
-            fuel -= 0.5
+                vy -= acceleration
+                fuel -= 0.5
+        elif fuel <= 0 and emergency_fuel > 0 and not emergency_used:
+                vy -= (gravity / 2)  # Emergency thrust is weaker
+                emergency_used = True
+                draw_lander(frame,lander_x,lander_y,angle,thrusters,emergency_fuel,emergency_used,fuel)
+                emergency_fuel -= 0.3
         else:
-            vy += gravity
+               vy += gravity
+
 
         vy = max(min(vy, 2), -1)
         lander_y += int(vy)
@@ -154,7 +168,7 @@ def draw_simulation(fuel, temperature):
         vx += avoidance_force
         lander_x += int(vx)
 
-        draw_lander(frame, lander_x, lander_y, angle, thrusters)
+        draw_lander(frame, lander_x, lander_y, angle, thrusters,emergency_fuel,False,fuel)
 
         bar_x = width - 50
         bar_top = 50
@@ -175,29 +189,40 @@ def draw_simulation(fuel, temperature):
         cv2.putText(frame, f"V Velocity: {vy:.2f} m/s", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.putText(frame, f"H Velocity: {vx:.2f} m/s", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
         cv2.putText(frame, f"Phase: {phase}", (10, 180), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 255), 2)
+        if emergency_fuel > 0:
+            cv2.putText(frame, f"Emergency Fuel: {int(emergency_fuel)}", (10, 330), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
         if thrusters.get("FL") and fuel>0:
               cv2.putText(frame, f"FL: ON", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+              thrust_sound.play(-1)
         else:
               cv2.putText(frame, f"FL: OFF", (10, 210), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         if thrusters.get("FR") and fuel>0:
               cv2.putText(frame, f"FR: ON", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+              thrust_sound.play(-1)
         else:
               cv2.putText(frame, f"FR: OFF", (10, 240), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         if thrusters.get("RL") and fuel>0:
             cv2.putText(frame, f"RL: ON", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            thrust_sound.play(-1)
         else:
             cv2.putText(frame, f"RL: OFF", (10, 270), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
         if thrusters.get("RR") and fuel>0:
             cv2.putText(frame, f"RR: ON", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            thrust_sound.play(-1)
         else:
             cv2.putText(frame, f"RR: OFF", (10, 300), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
         if fuel==0:
-            cv2.putText(frame, "Crashed!(OUT OF FUEL)", (width//4 + 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-            cv2.imshow("Moon Lander Simulation", frame)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
-            break
+                if vy > 1.5:
+                   vy -= 0.3  # Emergency retro-thrust
+                   cv2.putText(frame, "EMERGENCY RETRO THRUST ACTIVATED!", (width//2-100, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                   draw_lander(frame,lander_x,lander_y,angle,thrusters,emergency_fuel,emergency_used,fuel)
+                   emergency_fuel-=0.3
+                if emergency_fuel<=0:     
+                   cv2.putText(frame, "Crashed!(OUT OF FUEL)", (width//4 + 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                   cv2.imshow("Moon Lander Simulation", frame)
+                   cv2.waitKey(0)
+                   cv2.destroyAllWindows()
+                   break
 
         cv2.imshow("Moon Lander Simulation", frame)
         if cv2.waitKey(100) == 27:
@@ -206,12 +231,18 @@ def draw_simulation(fuel, temperature):
          if lander_y >= height - 150:
             if abs(vy) <= 2 and abs(vx) <= 2:
                 cv2.putText(frame, "Landed Safely!", (width//2 - 200, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 0), 4)
+                thrust_sound.stop()
             else :
                 cv2.putText(frame, "Crashed!", (width//2 - 100, height//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 255), 4)
+                
             cv2.imshow("Moon Lander Simulation", frame)
             cv2.waitKey(0)
             break
-
+        
+        if fuel < 20 and fuel > 0:
+           cv2.putText(frame, "WARNING: LOW FUEL!", (width//2 - 150, 100), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+           low_fuel_sound.play(-1)
+        
         cv2.imshow("Moon Lander Simulation", frame)
         if cv2.waitKey(100) == 27:
             break
@@ -221,4 +252,5 @@ def draw_simulation(fuel, temperature):
 if __name__ == "__main__":
     fuel = int(input("Enter initial fuel level: "))
     temperature = int(input("Enter temperature (-100 to +100 °C): "))
-    draw_simulation(fuel, temperature)
+    emergency_fuel=int(input("Enter the emergency fuel needed:"))
+    draw_simulation(fuel, temperature,emergency_fuel)
